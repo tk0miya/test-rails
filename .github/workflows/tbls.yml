@@ -1,0 +1,61 @@
+on:
+  push:
+    branches: [main]
+    paths:
+      - db/schema.rb
+      - .tbls.yml
+
+permissions:
+  contents: write
+
+jobs:
+  tbls:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:5.7
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: y
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: 3.1.2
+          bundler-cache: true
+      - name: Install Bundler
+        run: gem install bundler --no-document -v $(grep "BUNDLED WITH" -1 Gemfile.lock | tail -n 1)
+      - name: Bundle install
+        run: bundle install --path=vendor/bundle --jobs 4 --retry 3
+      - name: DB setup
+        run: |
+          cp config/database.yml.example config/database.yml
+          bundle exec rails db:create db:migrate
+      - name: Execute tbls
+        run: |
+          curl -sL https://git.io/use-tbls > use-tbls.tmp && . ./use-tbls.tmp && rm ./use-tbls.tmp
+          rm -rf docs/schema
+          tbls doc
+      - name: Count changed or untracked files
+        id: check_diff
+        run: |
+          git status --porcelain | wc -l
+          file_count=$(git status --porcelain | wc -l)
+          echo "::set-output name=file_count::$file_count"
+      - name: Commit ER graph
+        if: ${{ steps.check_diff.outputs.file_count != '0' }}
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add docs/schema
+          git commit -m "generate ER graphs from actions"
+          git push

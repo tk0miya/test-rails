@@ -1,0 +1,2 @@
+dsn: mysql://root@127.0.0.1:3306/test_development
+docPath: docs/schema

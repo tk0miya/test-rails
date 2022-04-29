@@ -1,0 +1,52 @@
+name: RSpec
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+
+jobs:
+  rspec:
+    runs-on: ubuntu-latest
+    env:
+      RAILS_ENV: test
+      DATABASE_HOST: localhost
+      REDIS_URL: redis://redis:6379/1
+
+    services:
+      mysql:
+        image: mysql:5.7
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: y
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:alpine
+        options: >-
+          --health-cmd "redis-cli -h localhost ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - uses: actions/checkout@v2
+    - uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: 3.1.2
+        bundler-cache: true
+    - name: Install Bundler
+      run: gem install bundler --no-document -v $(grep "BUNDLED WITH" -1 Gemfile.lock | tail -n 1)
+    - name: Bundle install
+      run: bundle install --path=vendor/bundle --jobs 4 --retry 3
+    - name: DB setup
+      run: |
+        cp config/database.yml.example config/database.yml
+        bundle exec rails db:create db:migrate db:seed
+    - name: Run tests
+      run: bundle exec rspec
