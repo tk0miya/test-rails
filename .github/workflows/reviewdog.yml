@@ -15,4 +15,4 @@ jobs:
           ruby-version: 3.1.2
       - uses: tk0miya/action-erblint@v1
         with:
-          use-bundler: true
+          use_bundler: true
