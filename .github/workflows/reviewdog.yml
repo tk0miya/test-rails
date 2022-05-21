@@ -17,4 +17,4 @@ jobs:
         run: bundle install
       - uses: reviewdog/action-setup@v1
       - name: erb-lint
-        run: bundle exec erblint --lint-all --format compact | reviewdog -reporter github-pr-review
+        run: bundle exec erblint --lint-all --format compact | reviewdog -efm '%f:%l:%c: %m' -reporter github-pr-review
