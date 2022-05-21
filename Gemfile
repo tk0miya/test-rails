@@ -51,6 +51,8 @@ group :development, :test do
   gem "debug", platforms: %i[ mri mingw x64_mingw ]
 
   gem 'rspec'
+
+  gem 'erb_lint'
 end
 
 group :development do
